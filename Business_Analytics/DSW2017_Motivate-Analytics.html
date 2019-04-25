@@ -1,0 +1,212 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>DSW2017 - Business Analytics</title>
+		<meta name="author" content="Hrant Davtyan">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="http://cdn.jsdelivr.net/reveal.js/3.0.0/css/reveal.min.css">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/reveal.js/3.0.0/css/theme/beige.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/highlight.js/9.11.0/styles/railscasts.min.css">
+		
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+		<div class="reveal">
+
+      <!-- Any section element inside of this container is displayed as a slide -->
+      <div class="slides">
+	<section data-markdown>
+
+# Business Analytics
+<h3> using BetaGeometric/NegativeBinomial Distribution </h3></br>
+
+<h3> *by Hrant Davtyan* </h3>
+
+	</section>
+
+	<section data-markdown>
+
+##How to motivate a company to apply analytics?
+
+	</section>
+
+	<section data-markdown>
+
+<script type="text/template">
+## *Problem*
+--------------------------
+</br>
+####Analytics is costly <!-- .element: class="fragment" data-fragment-index="1" -->
+
+Data collection, hiring, infrastructure... <!-- .element: class="fragment" data-fragment-index="2" -->
+
+</script>
+	</section>
+
+<section data-markdown>
+
+	<script type="text/template">
+## Solution
+--------------------------
+A model that:
+
+- requires small amount of data <!-- .element: class="fragment grow highlight-blue" data-fragment-index="1" -->
+
+- can be generalized to different kinds of behavior <!-- .element: class="fragment grow highlight-blue" data-fragment-index="2" -->
+
+- is easily implemented <!-- .element: class="fragment grow highlight-blue" data-fragment-index="3" -->
+
+- out-of-sample validation <!-- .element: class="fragment grow highlight-blue" data-fragment-index="4" -->
+
+	</script>
+</section>
+
+<section data-markdown>
+
+## Required Data
+--------------------------
+- Recency - What was the last time an action was taken?
+- Frequency - How many times the action was taken in a specific period of time?
+
+</section>
+
+<section data-markdown>
+	<section data-markdown>
+		<script type="text/template">
+## Required Data (exmaple)
+--------------------------
+- What was the last time an action was taken?
+	- The date/time of last purchase by a customer <!-- .element: class="fragment highlight-blue" data-fragment-index="1" -->
+- How many times the action was taken in a specific period of time?
+	- The number of transactions made by the customer during that period <!-- .element: class="fragment highlight-blue" data-fragment-index="2" -->
+		</script>
+	</section>
+	<section data-markdown>
+## Applications
+--------------------------
+- Predicting how often a visitor will return to your website. (Alive = visiting. Die = decided the website wasn't for them)
+- Understanding how frequently a patient may return to a hospital. (Alive = visiting. Die = maybe the patient moved to a new city, or became deceased.)
+- Predicting individuals who have churned from an app using only their usage history. (Alive = logins. Die = removed the app)
+- Predicting repeat purchases from a customer. (Alive = actively purchasing. Die = became disinterested with your product)
+- Predicting the lifetime values of your customers
+	</section>
+</section>
+
+<section data-markdown>
+![img](http://i65.tinypic.com/nmgpj6.png)
+</section>
+
+<section data-markdown>
+![img](http://i63.tinypic.com/huooap.png)
+</section>
+
+<section data-markdown>
+## Assumptions
+--------------------------
+- The phenomenon being modelled is a sequence of independent trials.
+- There are only two possible outcomes for each trial, often designated success or failure.
+- The probability of success, p, is the same for every trial.
+</section>
+
+<section data-markdown>
+## Applications
+--------------------------
+- Predicting how often a visitor will return to your website. (Alive = visiting. Die = decided the website wasn't for them)
+- Understanding how frequently a patient may return to a hospital. (Alive = visiting. Die = maybe the patient moved to a new city, or became deceased.)
+- Predicting individuals who have churned from an app using only their usage history. (Alive = logins. Die = removed the app)
+- Predicting repeat purchases from a customer. (Alive = actively purchasing. Die = became disinterested with your product)
+- Predicting the lifetime values of your customers
+</section>
+
+<section data-markdown>
+## Implementation in Python
+--------------------------
+	<pre class="python"><code>
+```
+from lifetimes import BetaGeoFitter
+bgf = BetaGeoFitter()
+bgf.fit(data['frequency'], data['recency'], data['T'])
+from lifetimes.plotting import plot_frequency_recency_matrix
+plot_frequency_recency_matrix(bgf)
+from lifetimes.plotting import plot_probability_alive_matrix
+plot_probability_alive_matrix(bgf)
+```
+	</code></pre>
+
+</section>
+
+<section data-markdown>
+## Summary
+--------------------------
+
+- R/F based models are good and budget-friendly start for those companies, who are stepping into customer analytics
+- Analytics savvy companies can apply more advanced models
+</section>
+
+<section>
+	<blockquote>Thank You</blockquote>
+<br>
+<small align="left">
+E-mail: hdavtyan@aua.am<br>
+Mobile: (099) 02-06-62<br>
+LinkedIn: https://www.linkedin.com/in/hrantdavtyan/ <br>
+GitHub: https://github.com/HrantDavtyan <br>
+</small>
+</section>
+	      </div>
+    </div>
+
+	<script src="http://cdn.jsdelivr.net/reveal.js/3.0.0/lib/js/head.min.js"></script>
+    <script src="http://cdn.jsdelivr.net/reveal.js/3.0.0/js/reveal.min.js"></script>
+
+    <script>
+     // Full list of configuration options available at:
+     // https://github.com/hakimel/reveal.js#configuration
+     Reveal.initialize({
+       slideNumber:true,
+       controls: true,
+       progress: true,
+       history: true,
+       center: true,
+       transitionSpeed:'slow',
+       previewLinks:true,
+       transition: 'convex', // none/fade/slide/convex/concave/zoom
+       // Optional reveal.js plugins
+       dependencies: [
+	 { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/lib/js/classList.js',
+	   condition: function() { return !document.body.classList; } },
+	 { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/markdown/marked.js',
+	   condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+	 { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/markdown/markdown.js',
+	   condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+	 { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/highlight/highlight.js',
+	   async: true,
+	   condition: function() { return !!document.querySelector( 'pre code' ); },
+	   callback: function() { hljs.initHighlightingOnLoad(); } },
+	 { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/zoom-js/zoom.js', async: true },
+	 { src: 'http://cdn.jsdelivr.net/reveal.js/3.0.0/plugin/notes/notes.js', async: true }
+       ]
+     });
+    </script>
+	</body>
+</html>

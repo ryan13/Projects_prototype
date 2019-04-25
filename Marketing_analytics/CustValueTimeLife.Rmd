@@ -1,0 +1,80 @@
+---
+title: "CustomerLifetimeValue"
+author: "TriDoan"
+date: "April 21, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+This is a short version of Customer Life time Value project
+
+```{r echo= FALSE}
+
+
+# Structure of dataset
+str(salesData, give.attr = FALSE)
+
+# Visualization of correlations
+salesData %>% select_if(is.numeric) %>%
+  select(-id) %>% cor() %>%
+  corrplot()
+ 
+## display corr plot frequent stores
+
+ggplot(salesData) +
+    geom_boxplot(aes(x = mostFreqStore, y = salesThisMon))
+
+# Preferred brand
+ggplot(salesData) +
+    geom_boxplot(aes(x = preferredBrand, y = salesThisMon))
+```
+
+
+1, Using linear regression model
+
+```{R}
+# Model specification using lm
+salesSimpleModel <- lm(salesThisMon ~ salesLast3Mon, 
+                       data = salesData)
+
+# Looking at simple linear model summary
+summary(salesSimpleModel)
+
+```
+2. Checking multiple linear regression and check variance Inflation Factor
+
+```{R }
+# Estimating the full model
+salesModel1 <- lm(salesThisMon ~ . - id, 
+                 data = salesData)
+
+# Checking variance inflation factors
+library(rms)
+vif(salesModel1)
+
+# Estimating new model by removing information on brand
+salesModel2 <- lm(salesThisMon ~ . -id - preferredBrand -nBrands, 
+                 data = salesData)
+
+# Checking variance inflation factors
+
+vif(salesModel2)
+
+```
+3. Using sales from month 2 to 4 to predict month 5
+
+```{r}
+salesData2_4 <- read.csv("salesDataMon2To4.csv", header=TRUE, sep=",")
+
+```
+Predict sale
+```{r}
+# predicting sales
+predSales5 <- predict(salesModel2, newdata = salesData2_4)
+
+# calculating mean of future sales
+mean(predSales5)

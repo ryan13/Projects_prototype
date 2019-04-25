@@ -1,0 +1,158 @@
+---
+title: "ChurnPrevention"
+author: "TriDoan"
+date: "April 21, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is a simulate customer churn retention project
+
+The purpose of Churn prevention is a measure to ensure that customers visit the online shop again.
+
+```{r }
+
+setwd('C:/Projects_simulate/Marketing_analytics')
+
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+
+defaultData <- read.csv("defaultData.csv", header=TRUE, sep=";")
+
+```
+
+0. Explore data
+```{r}
+# Summary of data
+summary(defaultData)
+
+# Look at data structure
+str(defaultData)
+
+# Analyze the balancedness of dependent variable
+ggplot(defaultData,aes(x = PaymentDefault)) +
+  geom_histogram(stat = "count") 
+
+```
+
+1. Using glm model to built logistic regression
+
+```{r}
+# Build logistic regression model
+logitModelFull <- glm(PaymentDefault ~ limitBal + sex + education + marriage +
+                   age + pay1 + pay2 + pay3 + pay4 + pay5 + pay6 + billAmt1 + 
+                   billAmt2 + billAmt3 + billAmt4 + billAmt5 + billAmt6 + payAmt1 + 
+                   payAmt2 + payAmt3 + payAmt4 + payAmt5 + payAmt6, 
+                family = binomial, data = defaultData)
+
+# Take a look at the model
+summary(logitModelFull)
+
+# Take a look at the odds
+coefsexp <- coef(logitModelFull) %>% exp() %>% round(2)
+coefsexp
+
+```
+
+3. Implement model selection
+
+```{r}
+library(MASS)
+# The old (full) model
+logitModelFull <- glm(PaymentDefault ~ limitBal + sex + education + marriage +
+                   age + pay1 + pay2 + pay3 + pay4 + pay5 + pay6 + billAmt1 + 
+                   billAmt2 + billAmt3 + billAmt4 + billAmt5 + billAmt6 + payAmt1 + 
+                   payAmt2 + payAmt3 + payAmt4 + payAmt5 + payAmt6, 
+                 family = binomial, defaultData)
+
+#Build the new model
+logitModelNew <- stepAIC(logitModelFull,trace=0) 
+
+#Look at the model
+summary(logitModelNew) 
+
+# Save the formula of the new model (it will be needed for the out-of-sample part) 
+formulaLogit <- as.formula(summary(logitModelNew)$call)
+formulaLogit
+
+```
+4. Evaluate model
+
+``{r}
+# Make predictions using the full Model
+defaultData$predFull <- predict(logitModelFull, type = "response", na.action = na.exclude)
+
+# Construct the in-sample confusion matrix
+confMatrixModelFull <- confusion.matrix(defaultData$PaymentDefault,defaultData$predFull, threshold = 0.5)
+confMatrixModelFull
+
+# Calculate the accuracy for the full Model
+accuracyFull <- sum(diag(confMatrixModelFull)) / sum(confMatrixModelFull)
+accuracyFull
+
+```
+5. Compare simple and full model
+
+ Calculate the accuracy for 'logitModelNew'
+
+
+
+```{r}
+# Construct the in-sample confusion matrix
+library(SDMTools)
+logitModelNew <- glm(formula = PaymentDefault ~ marriage + pay1 + pay3 + pay5 + 
+    billAmt1 + billAmt6 + payAmt1 + payAmt2 + payAmt5 + payAmt6, 
+    family = binomial, data = defaultData)
+
+# Calculate the accuracy for 'logitModelNew'
+
+defaultData$predNew <- predict(logitModelNew, type = "response", na.action = na.exclude)
+
+
+# Construct the in-sample confusion matrix
+confMatrixModelNew <- confusion.matrix(defaultData$PaymentDefault,defaultData$predNew, threshold = 0.5)
+confMatrixModelNew
+
+accuracyNew <- sum(diag(confMatrixModelNew)) / sum(confMatrixModelNew)
+accuracyNew
+
+```
+Determine optimal threshold
+
+```{r}
+# Prepare data frame with threshold values and empty payoff column
+payoffMatrix <- data.frame(threshold = seq(from = 0.1, to = 0.5, by = 0.1),
+                           payoff = NA) 
+payoffMatrix 
+ 
+for(i in 1:length(payoffMatrix$threshold)) {
+  # Calculate confusion matrix with varying threshold
+  confMatrix <- confusion.matrix(defaultData$PaymentDefault,
+                defaultData$predNew, 
+                threshold = payoffMatrix$threshold[i])
+  # Calculate payoff and save it to the corresponding row
+  payoffMatrix$payoff[i] <- confMatrix[2,2]*1000 + confMatrix[2,1]*(-250)
+}
+payoffMatrix
+
+```
+7. Evaluate iwth out of sample
+
+```{r}
+# Split data in train and test set
+set.seed(534381) 
+defaultData$isTrain <- rbinom(nrow(defaultData), 1, 0.66)
+train <- subset(defaultData, defaultData$isTrain == 1)
+test <- subset(defaultData, defaultData$isTrain  == 0)
+
+logitTrainNew <- glm(formulaLogit, family = binomial, data = train) # Modeling
+test$predNew <- predict(logitTrainNew, type = "response", newdata = test) # Predictions
+
+# Out-of-sample confusion matrix and accuracy
+confMatrixModelNew <- confusion.matrix(test$PaymentDefault, test$predNew, threshold = 0.3) 
+sum(diag(confMatrixModelNew)) / sum(confMatrixModelNew) # Compare this value to the in-sample accuracy
+
