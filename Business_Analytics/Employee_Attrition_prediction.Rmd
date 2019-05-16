@@ -1,0 +1,172 @@
+---
+title: "Customer_Attrition"
+author: "TriDoan"
+date: "April 30, 2019"
+output: html_document
+
+
+It is typical problem in the organization where its workforce lose its employeee due to resign or retire instead of lay_off. The challenge is unbalance class that leads to unreliable results. In a 9/1 unbalance class, a simple modelcan beat the state of the art algo by always predicting the majority class. 
+
+Several techniques was introduced:
+  - Under sampling the majority class
+  - Over sampling the minority class
+  - Generating synthetic data for minority with SMOTE
+  - Cost sensitive 
+
+Under sampling may cause lost of info  while oversample may cause high generalization error rate.
+
+In this situation, business knowledge plays a vital role to determine the cost of misclassification. 
+Does TP costs us more than FN? In other words, the cost of misclassifying unlikely resign employees (TP) is less severe than the cost of misclassifying likely resign employee (FN)?
+
+Here, we believe cost sensitive is a proper choice to tackle this problem. 
+```{r}
+
+library(mlr)
+library(knitr)
+library(ggplot2)
+library(corrplot)
+
+```
+Load data
+```{r}
+set.seed(2281)
+
+#Reading the data set
+setwd("C:/Projects_repository/Predict-Employee-Attrition")
+
+df = read.csv("HR.csv")
+
+#Summary of the dataset
+summary(df)
+
+#df_copy = df
+  
+#Changing the factor level for the Attrition variable
+df$Attrition = factor(df$Attrition, levels = c("Yes", "No"))
+#df_copy$Attrition = factor(df_copy$Attrition, levels = c("Yes", "No"))
+
+#Deleting variables which have constant value throughout the dataset
+df$EmployeeCount = NULL
+df$StandardHours = NULL
+df$Over18 = NULL
+```
+
+EDA Exploratiory Data Analysis
+
+```{r}
+ggplot(df, aes(x= Attrition, fill= Attrition)) + geom_bar()  +ylab("Count") + ggtitle("Class Distribution")
+
+```
+Plot correlation
+```{r}
+corr_mat <- cor(df[,-c(2, 3, 5, 8, 11, 15, 17, 21)])
+corrplot(corr_mat)
+
+```
+Plot density of Attrition, group by Age
+```{r}
+ggplot(df, aes(x= Age)) +geom_histogram(binwidth=10, aes(y=..density.., fill= Attrition), pos= "Dodge") + ggtitle("Class distribution density, grouped by Age bins")
+```
+Plot density of Attrition group by Monthly income
+```{r}
+ggplot(df, aes(x= MonthlyIncome)) + geom_histogram(binwidth=5000, aes(y=..density.., fill= Attrition), pos= "Dodge") + ggtitle("Class distribution density, group by Monthly INcome")
+
+```
+
+Create train, test set on ratio 7:3
+```{r}
+splitIndex = sample(1:nrow(df), nrow(df)*0.7, replace =TRUE)
+trainSplit <- df[splitIndex,]
+testSplit <- df[-splitIndex,]
+
+```
+Training task, testing task
+
+```{r}
+attrition.task <- makeClassifTask(data = trainSplit, target= "Attrition")
+#Removing features with constant values
+attrition.task = removeConstantFeatures(attrition.task)
+
+test.task <-  makeClassifTask(data= testSplit, target= "Attrition")
+test.task <- removeConstantFeatures(test.task)
+
+```
+The logic is that the True Postive will be less than the cost of False Negatives. As a result,  we want to reduce of False Negative DUE TO high cost of misclassifying employee unlikely to resign while he is likely to resign. On the other hand, FP is less severe since company mistakes classifying unlikely resign as resign since they migh have time to talk to employee and fix any further issue. Here,we choose the cost of FN (0.9) is higher TP (0.6), FP is 0.2.
+
+Building cost matrix (we will use the same approach for decision tree)
+
+```{r}
+costs = matrix(c(0.6, 0.2, 0.9, 0), 2)
+colnames(costs) = rownames(costs) = getTaskClassLevels(attrition.task)
+
+attrition.costs = makeCostMeasure(id = "attrition.costs", name = "Attrition costs", costs = costs,
+                                  best = 0, worst = 0.9)
+attrition.costs
+
+```
+ Train a model and make prediction
+```{r}
+###Thresholding without parameter training
+## Train and predict posterior probabilities
+lrn = makeLearner("classif.multinom", predict.type = "prob", trace = FALSE)
+mod = train(lrn, attrition.task)
+pred = predict(mod, task = attrition.task)
+pred
+
+```
+
+Check performance on several metrics
+```{r}
+
+#Performance on training set without using parameter training
+#performance(pred, measures = list(attrition.costs, f1))
+
+```
+Using threshold
+
+```{r}
+lrn = makeLearner("classif.multinom", predict.type = "prob", trace = FALSE)
+rin = makeResampleInstance("CV", iters = 5, task = attrition.task)
+r = resample(lrn, attrition.task, resampling = rin, measures = list(attrition.costs, f1), show.info = FALSE)
+r
+```
+Tuning parameters
+
+```{r}
+#Tuning Threshold Parameters
+tune.res = tuneThreshold(pred = r$pred, measure = attrition.costs)
+tune.res
+```
+Now that we have obtained our threshold values for Attrition being positive, let's train our model using this threshold
+```{r}
+lrn = makeLearner("classif.multinom", predict.type = "prob", predict.threshold = tune.res$th, trace = FALSE)
+mod = train(lrn, attrition.task)
+
+
+#Performance on training set after using parameter training
+pred = predict(mod, task = attrition.task)
+
+```
+performance(pred, measures = list(attrition.costs, f1))
+
+#performance(pred, measures = list(attrition.costs, mmce))
+
+
+#Performance on test set after using parameter training
+pred = predict(mod, task = test.task)
+
+performance(pred, measures = list(attrition.costs, f1))
+
+#performance(pred, measures = list(attrition.costs, mmce))
+
+calculateConfusionMatrix(pred, relative = FALSE)
+
+Visualization Performance by False positive, False negative
+```
+Show the firt 10 prediction 
+```{r}
+pred$data[1:10,quit]
+```{r}
+d = generateThreshVsPerfData(pred, measures = list(fpr, fnr, mmce))
+
+plotThreshVsPerf(d)
